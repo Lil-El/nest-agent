@@ -19,8 +19,6 @@ export class AiService {
 
   // 基于构造函数注入
   constructor(@Inject("CHAT_MODEL") model: ChatOpenAI) {
-    console.log("constructor chat_model:", this.chat_model?.model); // undefined
-
     const prompt = new PromptTemplate({
       template: "请回答以下问题：\n\n{query}",
       inputVariables: ["query"],
@@ -32,14 +30,14 @@ export class AiService {
   // nest 是先执行构造函数，然后注入，最后执行 onModuleInit 函数；所以在构造函数中不可以使用属性注入的属性；
   // 可以在 onModuleInit 生命周期钩子中使用属性注入的属性，但此时链已经构建完成；
   onModuleInit() {
-    console.log("onModuleInit chat_model:", this.chat_model.model); // 正常输出模型名称
+    // console.log("onModuleInit chat_model:", this.chat_model.model); // 正常输出模型名称
   }
 
-  async runChain(query: string): Promise<string> {
+  async invoke(query: string): Promise<string> {
     return this.chain.invoke({ query });
   }
 
-  async *streamChain(query: string): AsyncGenerator<string> {
+  async *stream(query: string): AsyncGenerator<string> {
     const stream = await this.chain.stream({ query });
     for await (const chunk of stream) {
       yield chunk;

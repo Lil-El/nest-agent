@@ -23,3 +23,24 @@ MVC 架构：
 1. `nest g module` 只创建的是 module
 
 2. `nest g res` 创建的是 resource，包含完整的 RESTful 资源模块（模块 + 控制器 + 服务 + DTOs + 实体）
+
+## 模块
+
+- 1. book：nest 基础使用
+- 2. ai: sse 流式返回AI响应
+- 3. cron: web 搜索、邮件发送、定时任务
+
+### 模块引用
+
+**在 cron 中使用 book**
+
+> app.module 中导入了 cron 和 book module，但是 cron 和 book 直接是相互隔离的
+
+- 在 `book.module` 中导出 `export book.service`
+- 在 `cron` 中使用 `bookService` 时，需要在 `cron.module` 中导入 `book.module`
+  - `@Inject(BookService)`
+
+或者
+
+- 在 `book.module` 中不导出 `export book.service`
+- 在 `cron.module` 中直接提供 `provide book.service`
