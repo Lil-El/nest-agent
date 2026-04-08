@@ -61,7 +61,7 @@ import { AliCloudModule } from "./cloud/cloud.module";
       },
     }),
     // 这里也可以使用 ConfigService 配置，为了学习动态模块，所以创建了单独的模块
-    AliCloudModule.forRootAsync({
+    /* AliCloudModule.forRootAsync({
       // isGlobal: true,
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
@@ -72,7 +72,7 @@ import { AliCloudModule } from "./cloud/cloud.module";
           nlsKey: configService.getOrThrow("ALI_CLOUD_NLS_API_KEY"),
         };
       },
-    }),
+    }), */
     BookModule,
     AiModule,
     Ai2Module,
@@ -89,7 +89,6 @@ export class AppModule implements OnApplicationBootstrap {
   schedulerRegistry: SchedulerRegistry;
 
   async onApplicationBootstrap() {
-    console.log("AppModule onApplicationBootstrap");
     // this.testScheduler();
   }
 

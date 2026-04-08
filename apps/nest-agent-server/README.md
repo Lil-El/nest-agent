@@ -1,6 +1,7 @@
 # Nest
 
 > 项目仅用作个人测试，package.json 中可以不使用 scope
+> .env 文件内容在语雀中查看
 
 ## 架构
 
@@ -35,7 +36,15 @@ MVC 架构：
 
 ### Nest
 
-1.模块引用
+1.`controller` 调用 `service`
+
+> 一个controller需要使用两个service时，是在一个service中调用另一个service呢，还是在controller中调用两个service呢
+
+简单场景：Controller 调用多个 Service
+
+复杂业务逻辑：创建专门的协调 Service
+
+2.模块引用
 
 **在 cron 中使用 book**
 
@@ -51,7 +60,7 @@ MVC 架构：
 - 在 `book.module` 中不导出 `export book.service`
 - 在 `cron.module` 中直接提供 `provide book.service`
 
-2.动态模块
+3.动态模块
 
 **创建动态模块 `cloud`**
 
