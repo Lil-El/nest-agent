@@ -28,7 +28,8 @@ MVC 架构：
 
 - 1. book：nest 基础使用
 - 2. ai: sse 流式返回AI响应
-- 3. cron: web 搜索、邮件发送、定时任务
+- 3. cron: web 搜索、邮件发送、数据库操作、定时任务
+  - 4. job: 定时任务
 
 ### 模块引用
 
@@ -44,3 +45,7 @@ MVC 架构：
 
 - 在 `book.module` 中不导出 `export book.service`
 - 在 `cron.module` 中直接提供 `provide book.service`
+
+## Cron 表达式
+
+Cron表达式是一种用于定义定时任务执行时间的字符串格式

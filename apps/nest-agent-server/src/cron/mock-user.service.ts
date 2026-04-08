@@ -8,7 +8,7 @@ type User = {
 };
 
 @Injectable()
-export class UserService {
+export class MockUserService {
   private readonly users = new Map<string, User>([
     ["001", { id: "001", name: "赵云", email: "zhaoyun@example.com", role: "admin" }],
     ["002", { id: "002", name: "诸葛亮", email: "zhugeliang@example.com", role: "manager" }],
