@@ -17,6 +17,7 @@ export class WebSearchToolService {
       count: z.int().min(1).max(10).optional().describe("搜索数量"),
     });
 
+    //【TIP】：qwen 模型内置了web search tool，可以查看模型API启用 web 搜索功能；
     this.tool = tool(
       async ({ query, count }: { query: string; count: number }) => {
         const apiKey = this.configService.get("BOCHA_API_KEY");

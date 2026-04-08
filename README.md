@@ -1,6 +1,6 @@
 # NestJS + Langchain
 
-## 依赖
+## 项目创建
 
 ```bash
 npm i -g @nestjs/cli

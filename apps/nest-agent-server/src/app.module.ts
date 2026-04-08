@@ -4,7 +4,7 @@ import { AppService } from "./app.service";
 import { BookModule } from "./book/book.module";
 import { AiModule } from "./ai/ai.module";
 import { ConfigModule, ConfigService } from "@nestjs/config";
-import { CronModule } from "./cron/cron.module";
+import { Ai2Module } from "./ai2/ai2.module";
 import { MailerModule } from "@nestjs-modules/mailer";
 import { ServeStaticModule } from "@nestjs/serve-static";
 import { join } from "path";
@@ -60,7 +60,7 @@ import { Job } from "./job/entities/job.entity";
     }),
     BookModule,
     AiModule,
-    CronModule,
+    Ai2Module,
     UsersModule,
     JobModule,
   ],

@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
-import { CronService } from "./cron.service";
-import { CronController } from "./cron.controller";
+import { Ai2Service } from "./ai2.service";
+import { Ai2Controller } from "./ai2.controller";
 import { MockUserService } from "./mock-user.service";
 import { z } from "zod";
 import { tool } from "@langchain/core/tools";
@@ -399,9 +399,9 @@ const getTimeToolProvider = {
 
 @Module({
   imports: [ToolModule, UsersModule, JobModule], // 导入模块
-  controllers: [CronController],
+  controllers: [Ai2Controller],
   providers: [
-    CronService,
+    Ai2Service,
     MockUserService,
     queryUserToolProvider,
     /* sendEmailToolProvider,
@@ -411,4 +411,4 @@ const getTimeToolProvider = {
     getTimeToolProvider, */
   ],
 })
-export class CronModule {}
+export class Ai2Module {}

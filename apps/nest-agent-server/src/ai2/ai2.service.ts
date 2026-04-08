@@ -13,7 +13,7 @@ import { Runnable } from "@langchain/core/runnables";
 import { ChatOpenAI } from "@langchain/openai";
 
 @Injectable()
-export class CronService {
+export class Ai2Service {
   // Runnable 的第一个类型参数是输入，第二个类型参数是输出。
   // 与 const aiMessage = await this.modelWithTools.invoke(messages); 对应
   private readonly modelWithTools: Runnable<BaseMessage[], AIMessage>;

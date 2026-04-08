@@ -3,7 +3,7 @@ import { SchedulerRegistry } from "@nestjs/schedule";
 import { EntityManager } from "typeorm";
 import { Job } from "./entities/job.entity";
 import { CronJob } from "cron";
-import { JobAgentService } from "src/cron/job-agent.service";
+import { JobAgentService } from "src/ai2/job-agent.service";
 
 @Injectable()
 export class JobService implements OnApplicationBootstrap {
