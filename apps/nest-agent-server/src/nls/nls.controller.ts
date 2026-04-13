@@ -17,15 +17,11 @@ import type { Response } from "express";
 import fs from "fs";
 
 import { Readable, PassThrough } from "stream";
-import { AiService } from "src/ai/ai.service";
 import ffmpeg from "fluent-ffmpeg";
 import { join } from "path";
 
 @Controller("nls")
 export class NlsController {
-  @Inject(AiService)
-  private readonly aiService: AiService;
-
   @Inject(NlsService)
   private readonly nlsService: NlsService;
 
@@ -109,11 +105,6 @@ export class NlsController {
     // return this.nlsService.asrStream(audioPath);
     return this.nlsService.asrStream(await fs.readFileSync(audioPath), "mp3");
   }
-
-  // @Get("chat")
-  // async chat(@Query("text") text: string): Promise<string> {
-  //   return this.aiService.invoke(text);
-  // }
 
   @Post("asr")
   @UseInterceptors(FileInterceptor("audio"))

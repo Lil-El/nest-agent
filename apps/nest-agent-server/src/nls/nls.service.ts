@@ -3,6 +3,9 @@ import { AliCloudService } from "src/cloud/cloud.service";
 
 import { SpeechSynthesizer, SpeechRecognition } from "alibabacloud-nls";
 import { createReadStream, readFileSync } from "fs";
+import { Socket } from "socket.io";
+import { AI_TTS_STREAM_EVENT, type AiTtsStreamEvent } from "src/common/stream-events";
+import { OnEvent } from "@nestjs/event-emitter";
 
 @Injectable()
 export class NlsService {
@@ -15,6 +18,23 @@ export class NlsService {
 
   private token: string;
 
+  private connectClients = new Map<string, Socket>();
+
+  // 为每个 sessionId 维护一个串行任务队列
+  private ttsQueues = new Map<string, Array<() => Promise<void>>>();
+  private ttsProcessing = new Map<string, boolean>();
+
+  addConnectClient(id, client: Socket) {
+    this.connectClients.set(id, client);
+  }
+
+  removeConnectClient(id) {
+    this.connectClients.delete(id);
+    // 清理该会话的队列状态
+    this.ttsQueues.delete(id);
+    this.ttsProcessing.delete(id);
+  }
+
   /**
    * 将文字转换为语音音频数据
    * @param text 要转换的文字
@@ -24,6 +44,12 @@ export class NlsService {
     this.appkey = await this.aliCloudService.getNlsKey();
     this.token = await this.aliCloudService.getToken();
 
+    // 过滤文本
+    text = text.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, "");
+    if (text.length === 0) {
+      return Buffer.from("");
+    }
+
     const tts = new SpeechSynthesizer({
       url: NlsService.URL,
       appkey: this.appkey,
@@ -31,10 +57,6 @@ export class NlsService {
     });
 
     const audioChunks: Buffer[] = [];
-
-    tts.on("failed", (msg) => {
-      console.log("Client recv failed:", msg);
-    });
 
     // 监听音频数据
     tts.on("data", (audioData: Buffer) => {
@@ -58,6 +80,10 @@ export class NlsService {
       tts.on("completed", () => {
         tts.shutdown();
         resolve(Buffer.concat(audioChunks));
+      });
+
+      tts.on("failed", (msg) => {
+        reject(JSON.parse(msg).header.status_text);
       });
     });
   }
@@ -144,5 +170,80 @@ export class NlsService {
           reject(error);
         });
     });
+  }
+
+  @OnEvent(AI_TTS_STREAM_EVENT)
+  async handleAiStreamEvent(event: AiTtsStreamEvent) {
+    const client = this.connectClients.get(event.sessionId);
+    if (!client) return;
+
+    switch (event.type) {
+      case "start": {
+        client.emit("tts-start", { messageId: event.messageId });
+        break;
+      }
+      case "end": {
+        client.emit("tts-end", { messageId: event.messageId });
+        break;
+      }
+      case "chunk": {
+        // 创建 TTS 任务
+        const ttsTask = async () => {
+          try {
+            const buffer = await this.textToSpeech(event.chunk);
+            const bufferArray = buffer;
+            if (bufferArray.length === 0) return void 0;
+
+            client.emit("speech_buffer", {
+              type: "Buffer",
+              data: bufferArray,
+            });
+          } catch (error) {
+            console.error(`TTS failed for session ${event.sessionId}:`, error);
+          } finally {
+            // 处理队列中的下一个任务
+            this.processNextTtsTask(event.sessionId);
+          }
+        };
+
+        // 将任务加入队列
+        if (!this.ttsQueues.has(event.sessionId)) {
+          this.ttsQueues.set(event.sessionId, []);
+        }
+        this.ttsQueues.get(event.sessionId)!.push(ttsTask);
+
+        // 如果当前没有正在处理的任务,则开始处理队列
+        if (!this.ttsProcessing.get(event.sessionId)) {
+          this.processNextTtsTask(event.sessionId);
+        }
+
+        break;
+      }
+      default: {
+      }
+    }
+  }
+
+  /**
+   * 处理队列中的下一个 TTS 任务
+   * @param sessionId 会话 ID
+   */
+  private async processNextTtsTask(sessionId: string) {
+    const queue = this.ttsQueues.get(sessionId);
+
+    // 如果队列为空或不存在,标记为未在处理
+    if (!queue || queue.length === 0) {
+      this.ttsProcessing.set(sessionId, false);
+      return;
+    }
+
+    // 标记为正在处理
+    this.ttsProcessing.set(sessionId, true);
+
+    // 取出并执行第一个任务
+    const task = queue.shift();
+    if (task) {
+      await task();
+    }
   }
 }

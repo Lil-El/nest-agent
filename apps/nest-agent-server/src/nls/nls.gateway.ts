@@ -12,10 +12,16 @@ import {
 import { Server, Socket } from "socket.io";
 import { NlsService } from "./nls.service";
 
+/**
+ * SSE 用于文本推送，但是语音的推送，需要websocket
+ * 因为SSE的二进制数据要转成base64，会导致体积过大
+ * 所以使用ws推送流式语音
+ */
+
 @WebSocketGateway({
-  cors: {
-    origin: "*",
-  },
+  // cors: {
+  //   origin: "*",
+  // },
   namespace: "nls",
 })
 export class NlsWsGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
@@ -31,10 +37,12 @@ export class NlsWsGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
 
   handleConnection(client: Socket, ...args: any[]) {
     console.log("nls gateway connection", client.id);
+    this.nlsService.addConnectClient(client.id, client);
   }
 
   handleDisconnect(client: Socket) {
     console.log("nls gateway disconnect", client.id);
+    this.nlsService.removeConnectClient(client.id);
   }
 
   @SubscribeMessage("speech_text")

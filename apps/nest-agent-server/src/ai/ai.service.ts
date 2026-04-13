@@ -8,6 +8,8 @@ import { PromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 
 import type { Runnable } from "@langchain/core/runnables";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { AiTtsStreamEvent, AI_TTS_STREAM_EVENT } from "src/common/stream-events";
 
 @Injectable()
 export class AiService {
@@ -18,7 +20,10 @@ export class AiService {
   private readonly chat_model: ChatOpenAI;
 
   // 基于构造函数注入
-  constructor(@Inject("CHAT_MODEL") model: ChatOpenAI) {
+  constructor(
+    @Inject("CHAT_MODEL") model: ChatOpenAI,
+    private readonly eventEmitter: EventEmitter2,
+  ) {
     const prompt = new PromptTemplate({
       template: "请回答以下问题：\n\n{query}",
       inputVariables: ["query"],
@@ -37,10 +42,21 @@ export class AiService {
     return this.chain.invoke({ query });
   }
 
-  async *stream(query: string): AsyncGenerator<string> {
+  async *stream(query: string, sessionId?: string, messageId?: string): AsyncGenerator<string> {
     const stream = await this.chain.stream({ query });
+
     for await (const chunk of stream) {
+      if (sessionId && messageId) {
+        const event: AiTtsStreamEvent = { sessionId, chunk, messageId, type: "chunk" };
+        this.eventEmitter.emit(AI_TTS_STREAM_EVENT, event);
+      }
+
       yield chunk;
+    }
+
+    if (sessionId && messageId) {
+      const event: AiTtsStreamEvent = { sessionId, messageId, type: "end" };
+      this.eventEmitter.emit(AI_TTS_STREAM_EVENT, event);
     }
   }
 }

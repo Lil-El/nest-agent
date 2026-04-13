@@ -17,12 +17,16 @@ import { JobModule } from "./job/job.module";
 import { Job } from "./job/entities/job.entity";
 import { NlsModule } from "./nls/nls.module";
 import { AliCloudModule } from "./cloud/cloud.module";
+import { EventEmitterModule } from "@nestjs/event-emitter";
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ".env",
+    }),
+    EventEmitterModule.forRoot({
+      maxListeners: 200
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, "..", "public"),
