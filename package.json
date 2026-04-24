@@ -4,7 +4,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start:server": "pnpm --filter nest-agent-server run start:dev"
+    "start:server": "pnpm --filter nest-agent run start:dev"
   },
   "repository": {
     "type": "git",
