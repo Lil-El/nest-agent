@@ -4,7 +4,7 @@ packages:
   - 'libs/*'
   - 'scripts/*'
   - 'tools/*'
-  - 'docs/*'
+  - 'shared/*'
   - '1.agent-learn/*'
   - '2.nest-agent/*'
   - '3.nest-agent-agui/*'
