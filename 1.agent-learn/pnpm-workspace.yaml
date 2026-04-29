@@ -1,0 +1,14 @@
+packages:
+  - 'example/*'
+  - 'graph/*'
+  - 'mcp/*'
+  - 'memory/*'
+  - 'milvus/*'
+  - 'ollama/*'
+  - 'output-parser/*'
+  - 'project/*'
+  - 'prompt/*'
+  - 'rag/*'
+  - 'runnable/*'
+  - 'tool/*'
+
