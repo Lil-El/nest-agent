@@ -1,7 +1,6 @@
-/*
-  普通的 RAG 使用：
-*/
-
+/**
+ * 基于 2. 升级，让模型可以处理需要多步检索的复杂问题，比如先查 A、再查 B 才能得出结论
+ */
 import "dotenv/config";
 import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
 import { Milvus } from "@langchain/community/vectorstores/milvus";
@@ -10,8 +9,7 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { Annotation, START, END, StateGraph } from "@langchain/langgraph";
 import { PromptTemplate } from "@langchain/core/prompts";
 
-// import { VectorStore } from "@langchain/core/vectorstores";
-// import { MilvusClient, MetricType } from "@zilliz/milvus2-sdk-node";
+import { z } from "zod";
 
 import path, { parse } from "path";
 
@@ -41,18 +39,7 @@ const embeddings = new OpenAIEmbeddings({
 const vectorStore = new Milvus(embeddings, {
   url: "localhost:19530",
   collectionName: COLLECTION_NAME,
-
-  // 因为文本进行了一次手动切割，第一次调用addDocuments时，最大长度时100+
-  // 后续addDocuments时是1000左右，所以还是手动设置一下最大长度吧
-  textFieldMaxLength: 3000, // UTF-8编码是字节为单位的，1个中文通常占3个字节
-
-  // vectorField: "vector", // 自定义向量字段名称，默认为 "langchain_vector"
-  // textField: "content", // 自定义文本字段名称，默认为 "langchain_text"
-  // indexCreateOptions: {
-  //   index_type: "IVF_FLAT",
-  //   metric_type: "COSINE",
-  //   params: { nlist: 1024 },
-  // }
+  textFieldMaxLength: 3000,
 });
 
 async function splitAndInsertDocuments() {
@@ -62,9 +49,6 @@ async function splitAndInsertDocuments() {
 
   const documents = (await loader.load()).slice(2, 6);
 
-  // 重要：textFieldMaxLength 限制的是 UTF-8 字节数，不是字符数
-  // 中文字符在 UTF-8 中通常占 3 个字节
-  // 如果 textFieldMaxLength=1200 字节，那么安全的字符数应该是 1200/3 = 400 字符左右
   const textSplitter = new RecursiveCharacterTextSplitter({
     chunkSize: 1000,
     chunkOverlap: 50,
@@ -82,8 +66,8 @@ async function splitAndInsertDocuments() {
           },
         };
       });
+
       if (docs.length) {
-        // addDocuments 内部会调用 embedDocuments 来获取向量，然后调用内部的 addVectors 方法将向量和文档一起插入 Milvus
         return vectorStore.addDocuments(docs);
       } else {
         return Promise.resolve();
@@ -127,26 +111,64 @@ async function retrieveContent(query) {
   });
 }
 
+const RouteSchema = z.object({
+  strategy: z.enum(["simple", "complex"]),
+  reason: z.string(),
+});
+
 const GraphState = Annotation.Root({
   question: Annotation,
   documents: Annotation,
   generation: Annotation,
+  strategy: Annotation,
+  routeReason: Annotation,
 });
 
 const graph = new StateGraph(GraphState)
+  .addNode("routeQuestion", async (state) => {
+    const router = model.withStructuredOutput(RouteSchema);
+
+    const route = await router.invoke(`
+      你是问答路由器。请判断用户问题是否需要外部检索，并以 JSON 格式返回结果。
+
+      规则：
+      - simple: 常识问答、简单问题即可回答。
+      - complex: 关于科学方面的问题需要外部检索。
+
+      用户问题：${state.question}
+
+      请以 JSON 格式返回，包含 strategy 和 reason 两个字段。
+    `);
+    console.log("路由结果:", route);
+
+    return {
+      ...state,
+      strategy: route.strategy,
+      routeReason: route.reason,
+    };
+  })
   .addNode("retrieve", async (state) => {
     const { question } = state;
     state.documents = await retrieveContent(question);
     return state;
   })
-  .addNode("generate", async (state) => {
+  .addNode("simpleAnswer", async (state) => {
+    const answer = await model.invoke(`你是一个中文问答助手，请直接简洁回答问题。
+
+      问题：${state.question}
+    `);
+
+    return {
+      ...state,
+      generation: answer,
+    };
+  })
+  .addNode("ragAnswer", async (state) => {
     const { documents, question } = state;
 
     const prompt = PromptTemplate.fromTemplate(`请根据以下内容回答问题：\n\n{context}\n\n问题：{question}\n\n回答：`);
 
     const context = documents.map((doc, index) => `[片段${index + 1}内容]：${doc}`).join("\n\n━━━━━\n\n");
-
-    // LCEL: const chain = prompt.pipe(model);  chain.invoke({ context, question })
 
     const promptWithValues = await prompt.format({ context, question });
 
@@ -156,18 +178,29 @@ const graph = new StateGraph(GraphState)
 
     return state;
   })
-  .addEdge(START, "retrieve")
-  .addEdge("retrieve", "generate")
-  .addEdge("generate", END)
+  .addEdge(START, "routeQuestion")
+  .addConditionalEdges("routeQuestion", (state) => (state.strategy === "simple" ? "a" : "b"), {
+    a: "simpleAnswer",
+    b: "retrieve",
+  })
+  .addEdge("retrieve", "ragAnswer")
+  .addEdge("simpleAnswer", END)
+  .addEdge("ragAnswer", END)
   .compile();
 
 async function main() {
   await ensureCollection();
 
+  const drawable = await graph.getGraphAsync();
+  const mermaid = drawable.drawMermaid({ withStyles: true });
+  // console.log(mermaid);
+
   const result = await graph.invoke({
-    question: "谁发现了磁力？",
+    question: "人们最早认为的引力是什么？", // 1+1
     documents: [],
     generation: "",
+    strategy: "",
+    routeReason: "",
   });
 
   console.log("结果:", result);
