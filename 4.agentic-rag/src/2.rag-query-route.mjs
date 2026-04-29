@@ -153,7 +153,7 @@ const graph = new StateGraph(GraphState)
     return state;
   })
   .addNode("simpleAnswer", async (state) => {
-    const answer = await model.invoke(`你是一个中文问答助手，请直接简洁回答问题。
+    const answer = await model.invoke(`你是一个问答助手，请直接简洁回答问题。
 
       问题：${state.question}
     `);
@@ -174,7 +174,7 @@ const graph = new StateGraph(GraphState)
 
     const generation = await model.invoke(promptWithValues);
 
-    state.generation = generation;
+    state.generation = generation.content;
 
     return state;
   })
