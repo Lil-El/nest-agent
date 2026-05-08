@@ -8,4 +8,6 @@ packages:
   - '1.agent-learn/*'
   - '2.nest-agent/*'
   - '3.nest-agent-agui/*'
+  - '4.agentic-rag'
+  - '5.es'
 
