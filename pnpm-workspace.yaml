@@ -10,4 +10,4 @@ packages:
   - '3.nest-agent-agui/*'
   - '4.agentic-rag'
   - '5.es'
-
+  - '6.neo4j'
